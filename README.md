@@ -100,13 +100,24 @@ sql/                      # Schema, seed data, and reconciliation queries
 
 ## **Key Highlights**
 
-Business Analysis: Complete documentation covering requirements, stakeholders, processes, personas, backlog, acceptance criteria, and UAT planning
+### **Business Analysis**
+- Complete documentation covering requirements, stakeholders, processes, personas, backlog, acceptance criteria, and UAT planning  
 
-Quality Assurance: Automated API tests, idempotency verification, validation coverage, performance smoke, and reconciliation checks
+### **Quality Assurance**
+- Automated API tests, idempotency verification, validation coverage, performance smoke testing, and reconciliation checks  
 
-ISO 20022 Expertise: Export endpoints and tests for pain.001, pain.002, pacs.008, pacs.002, camt.053, and camt.054
+### **ISO 20022 Expertise**
+- Export endpoints and tests for:
+  - pain.001 (Customer Credit Transfer Initiation)  
+  - pain.002 (Customer Payment Status Report)  
+  - pacs.008 (FI to FI Credit Transfer)  
+  - pacs.002 (FI Payment Status)  
+  - camt.053 (Bank to Customer Statement)  
+  - camt.054 (Credit/Debit Notification)  
 
-Author
+---
 
-GitHub: mmljay
+## **Author**
+- GitHub: [mmljay](https://github.com/mmljay)
+
 
