@@ -1,127 +1,159 @@
-# Corporate Payments — Credit Transfer & Reconciliation (BA + QA Portfolio)
+# Corporate Payments — BA + QA Portfolio (Credit Transfer & Reconciliation)
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![Node.js](https://img.shields.io/badge/Node.js-18+-green)
-![CI](https://img.shields.io/badge/CI-Passing-brightgreen)
-![License](https://img.shields.io/badge/License-MIT-lightgrey)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://www.python.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org/)
+[![CI](https://img.shields.io/github/actions/workflow/status/jayawardenamml/corporate-payments-ba-qa-portfolio/ci.yml?label=CI)](https://github.com/jayawardenamml/corporate-payments-ba-qa-portfolio/actions)
 
 This project demonstrates my end-to-end Business Analysis (BA) and Quality Assurance (QA) skills, focusing on credit transfer functionality and reconciliation processes. It combines comprehensive BA documentation with hands-on QA deliverables, supported by a minimal payments API mock that can run locally or in CI pipelines.
 
-## Project Demo
+---
 
-![Demo GIF](https://via.placeholder.com/600x300.png?text=Demo+GIF+or+Screenshot+Here)
+## What’s inside
 
-*Replace the placeholder above with a GIF or screenshot showing your API tests or CI pipeline in action.*
+- Business Analysis
+  - BRD/PRD, stakeholder map and RACI
+  - Personas, BPMN‑style flows
+  - Backlog, user stories, acceptance criteria
+  - UAT plan, risks, and KPIs
 
-## Project Scope
+- Quality Assurance
+  - Test strategy and plan
+  - Automated API tests (pytest)
+  - Performance smoke (k6)
+  - Reconciliation SQL checks
 
-### Business Analysis
-- Requirements gathering and documentation (BRD/PRD)
-- Stakeholder mapping and RACI matrix
-- Process modeling using BPMN flows
-- User personas, stories, and acceptance criteria
-- Backlog prioritization and UAT planning
-- Risk identification and success metrics (KPIs)
+- Payments scope
+  - Create and get payment
+  - Idempotency
+  - Simple cut‑off flag (schedule next day)
+  - ISO 20022 exports (simplified)
 
-### Quality Assurance
-- Test strategy and detailed test plan
-- Traceability matrix covering all user stories
-- API testing using pytest
-- Performance smoke testing with k6
-- Data integrity and reconciliation checks via SQL
+---
 
-### Domain
-- Credit transfer initiation and status lifecycle
-- Idempotency handling and cut-off flag management
-- Reconciliation patterns for financial transactions
+## Quick start
 
-### Standards
-- ISO 20022 message formats supported:
-  - pain.001 (Customer Credit Transfer Initiation)
-  - pain.002 (Customer Payment Status Report)
-  - pacs.008 (FI to FI Credit Transfer)
-  - pacs.002 (FI Payment Status)
-  - camt.053 (Bank to Customer Statement)
-  - camt.054 (Credit/Debit Notification)
+Prerequisites: Node.js 18+, Python 3.10+, pip
 
-## Quick Start
+1) Start the mock API
+- cd mocks/server
+- npm ci
+- npm start
+- Health: http://localhost:3000/health
 
-**Prerequisites:** Node.js 18+, Python 3.10+, pip
+2) Run tests
+- pip install -r requirements.txt
+- pytest -q
 
-### 1️⃣ Start the Mock API
+3) Optional: performance smoke
+- Install k6: https://k6.io/docs/get-started/installation/
+- k6 run tests/performance/create_payment.js
 
-cd mocks/server
-npm ci
-npm start
+---
 
-Health check: http://localhost:3000/health
+## ISO 20022 messages (simplified)
 
-### 2️⃣ Run API Tests
+| Endpoint | Message | Key elements |
+|---|---|---|
+| GET /payments/{id}/pain001 | pain.001 | MsgId, CreDtTm, EndToEndId, IBANs, InstdAmt |
+| GET /payments/{id}/pain002 | pain.002 | OrgnlMsgId, OrgnlEndToEndId, TxSts |
+| GET /payments/{id}/pacs008 | pacs.008 | EndToEndId, InstdAmt, Accounts |
+| GET /payments/{id}/pacs002 | pacs.002 | OrgnlEndToEndId, TxSts |
+| GET /payments/{id}/camt054 | camt.054 | NtryRef, Amt, EndToEndId |
+| GET /statements/camt053 | camt.053 | Header + entries (Ntry) |
+
+Notes:
+- XML is minimal for clarity.
+- Status maps to ACSP unless rejected.
+
+---
+
+## Sample usage
+
+Create a payment
 ```bash
-pip install -r requirements.txt
-pytest -q
+curl -X POST http://localhost:3000/payments \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: 123e4567" \
+  -d '{
+    "externalId":"ext-001",
+    "debtorIban":"SE12ABCDE1234567890123",
+    "creditorIban":"SE34ABCDE9876543210123",
+    "currency":"EUR",
+    "amountMinor":15000
+  }'
+```
 
-### 3️⃣ Optional: Performance Smoke Test
+Export a pain.001
 ```bash
-Install k6 → https://k6.io/docs/get-started/installation/
+curl http://localhost:3000/payments/{id}/pain001
+```
 
-k6 run tests/performance/create_payment.js
+---
 
-### Repository Structure
-```bash
+## Repository structure
 
+```text
 docs/
-├── brd.md
-├── prd.md
-├── stakeholders-and-raci.md
-├── process-flows-bpmn.md
-├── user-personas.md
-├── user-stories-and-backlog.md
-├── acceptance-criteria.md
-├── uat-plan.md
-├── test-strategy.md
-├── test-plan.md
-├── traceability-matrix.md
-├── risk-register.md
-├── metrics-and-kpis.md
-├── architecture.md
-├── iso20022-overview.md
-└── iso20022-mapping.md
+  brd.md
+  prd.md
+  stakeholders-and-raci.md
+  process-flows-bpmn.md
+  user-personas.md
+  user-stories-and-backlog.md
+  acceptance-criteria.md
+  uat-plan.md
+  test-strategy.md
+  test-plan.md
+  traceability-matrix.md
+  risk-register.md
+  metrics-and-kpis.md
+  architecture.md
+  iso20022-overview.md
+  iso20022-mapping.md
+api/
+  openapi.yaml
+mocks/server/
+  package.json
+  server.js
+tests/
+  api/ (pytest)
+  performance/ (k6)
+sql/
+  schema.sql
+  seed.sql
+  recon_queries.sql
+.github/workflows/
+  ci.yml
+requirements.txt
+```
 
-api/openapi.yaml            → API contract
-mocks/server/               → Minimal Node/Express API mock
-tests/api/                  → Functional & ISO 20022 API tests
-tests/performance/          → k6 smoke tests
-sql/                        → Schema, seed data, and reconciliation queries
-.github/workflows/ci.yml    → CI pipeline configuration
+---
 
-### Key Highlights
-```bash
+## How I worked (BA)
 
-Business Analysis
+- Defined the problem and outcomes (BRD/PRD)
+- Mapped stakeholders and roles (RACI)
+- Wrote clear user stories with acceptance criteria
+- Modeled flows for clarity
+- Planned UAT and set KPIs and risks
 
-Complete documentation covering requirements, stakeholders, processes, personas, backlog, acceptance criteria, and UAT planning.
+## How I tested (QA)
 
-Quality Assurance
+- Covered happy paths, validation, and idempotency
+- Checked a simple cut‑off flag
+- Parsed ISO 20022 XML in tests
+- Ran a small k6 performance smoke
+- Added SQL checks for reconciliation patterns
 
-Automated API tests, idempotency verification, validation coverage, performance smoke testing, and reconciliation checks.
+---
 
-ISO 20022 Expertise
+## Traceability and CI
 
-Export endpoints and tests for:
+- Requirements map to test cases (see docs/traceability-matrix.md)
+- CI runs on every push with GitHub Actions
 
-pain.001 (Customer Credit Transfer Initiation)
+---
 
-pain.002 (Customer Payment Status Report)
+## Author
 
-pacs.008 (FI to FI Credit Transfer)
-
-pacs.002 (FI Payment Status)
-
-camt.053 (Bank to Customer Statement)
-
-camt.054 (Credit/Debit Notification)
-
-Author
-
-GitHub: mmljay
+- GitHub: [mmljay](https://github.com/mmljay)
