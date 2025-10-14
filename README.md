@@ -98,7 +98,7 @@ tests/performance/        # k6 smoke tests
 sql/                      # Schema, seed data, and reconciliation queries
 .github/workflows/ci.yml  # CI pipeline
 
-Key Highlights
+## **Key Highlights**
 
 Business Analysis: Complete documentation covering requirements, stakeholders, processes, personas, backlog, acceptance criteria, and UAT planning
 
