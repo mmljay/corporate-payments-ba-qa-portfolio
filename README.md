@@ -98,15 +98,15 @@ tests/performance/        # k6 smoke tests
 sql/                      # Schema, seed data, and reconciliation queries
 .github/workflows/ci.yml  # CI pipeline
 
-## **Key Highlights**
+## ✨ Key Highlights
 
-### **Business Analysis**
+### 📝 Business Analysis
 - Complete documentation covering requirements, stakeholders, processes, personas, backlog, acceptance criteria, and UAT planning  
 
-### **Quality Assurance**
+### 🧪 Quality Assurance
 - Automated API tests, idempotency verification, validation coverage, performance smoke testing, and reconciliation checks  
 
-### **ISO 20022 Expertise**
+### 💾 ISO 20022 Expertise
 - Export endpoints and tests for:
   - pain.001 (Customer Credit Transfer Initiation)  
   - pain.002 (Customer Payment Status Report)  
@@ -117,7 +117,8 @@ sql/                      # Schema, seed data, and reconciliation queries
 
 ---
 
-## **Author**
+## 👤 Author
 - GitHub: [mmljay](https://github.com/mmljay)
+
 
 
