@@ -20,9 +20,17 @@ jobs:
       - name: Install and start mock API
         working-directory: mocks/server
         run: |
-          npm ci
+          npm install
           nohup npm start &
-          sleep 2
+          # Wait up to ~30s for health to be ready
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/health > /dev/null; then
+              echo "API is healthy"
+              break
+            fi
+            sleep 1
+          done
+          # Fail if not healthy
           curl -fsS http://localhost:3000/health
 
       - name: Set up Python
