@@ -1,0 +1,177 @@
+openapi: 3.0.3
+info:
+  title: Credit Transfer API (Mock)
+  version: "1.2.0"
+servers:
+  - url: http://localhost:3000
+paths:
+  /health:
+    get:
+      summary: Healthcheck
+      responses:
+        '200':
+          description: OK
+  /payments:
+    post:
+      summary: Create a payment
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Validation error
+  /payments/{id}:
+    get:
+      summary: Get payment by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Payment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '404':
+          description: Not Found
+  /payments/{id}/pain001:
+    get:
+      summary: Export payment as pain.001 XML (simplified)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: pain.001 XML
+          content:
+            application/xml:
+              schema: { type: string }
+        '404':
+          description: Not Found
+  /payments/{id}/pain002:
+    get:
+      summary: Export payment as pain.002 XML (simplified)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: pain.002 XML
+          content:
+            application/xml:
+              schema: { type: string }
+        '404':
+          description: Not Found
+  /payments/{id}/pacs008:
+    get:
+      summary: Export payment as pacs.008 XML (simplified)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: pacs.008 XML
+          content:
+            application/xml:
+              schema: { type: string }
+        '404':
+          description: Not Found
+  /payments/{id}/pacs002:
+    get:
+      summary: Export payment status as pacs.002 XML (simplified)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: pacs.002 XML
+          content:
+            application/xml:
+              schema: { type: string }
+        '404':
+          description: Not Found
+  /payments/{id}/camt054:
+    get:
+      summary: Export single payment notification as camt.054 XML (simplified)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: camt.054 XML
+          content:
+            application/xml:
+              schema: { type: string }
+        '404':
+          description: Not Found
+  /statements/camt053:
+    get:
+      summary: Export statement as camt.053 XML (simplified)
+      responses:
+        '200':
+          description: camt.053 XML
+          content:
+            application/xml:
+              schema: { type: string }
+components:
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      required: [externalId, debtorIban, creditorIban, currency, amountMinor]
+      properties:
+        externalId: { type: string }
+        debtorIban: { type: string, description: "IBAN-like format" }
+        creditorIban: { type: string, description: "IBAN-like format" }
+        currency:
+          type: string
+          enum: [EUR, SEK, USD]
+        amountMinor:
+          type: integer
+          minimum: 1
+        endToEndId: { type: string }
+        requestedExecutionDate:
+          type: string
+          format: date
+    Payment:
+      type: object
+      properties:
+        id: { type: string }
+        externalId: { type: string }
+        debtorIban: { type: string }
+        creditorIban: { type: string }
+        currency: { type: string }
+        amountMinor: { type: integer }
+        status:
+          type: string
+          enum: [INITIATED, PENDING, AUTHORIZED, SETTLED, REJECTED]
+        scheduledNextBusinessDay: { type: boolean }
+        endToEndId: { type: string }
+        requestedExecutionDate: { type: string, format: date }
+        createdAt: { type: string, format: date-time }
