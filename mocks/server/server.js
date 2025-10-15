@@ -7,24 +7,30 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// In-memory stores
-const payments = new Map();
-const idemKeys = new Map();
+// Friendly landing route for "/"
+app.get('/', (_req, res) => {
+  res
+    .status(200)
+    .send('Mock API is running. Try GET /health or POST /payments');
+});
 
-// Validators
+// In-memory stores
+const payments = new Map();   // id -> payment
+const idemKeys = new Map();   // idempotencyKey -> id
+
+// Validators/helpers
 const isIbanLike = (s) => typeof s === 'string' && /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s);
 const isCurrency = (s) => ['EUR', 'SEK', 'USD'].includes(s);
 const isPositiveInt = (n) => Number.isInteger(n) && n > 0;
 
-// Cut-off utility: after 16:00 local => schedule next business day
 function isAfterCutoff() {
   const now = dayjs();
   const cutoff = now.hour(16).minute(0).second(0);
   return now.isAfter(cutoff);
 }
 
-function majorAmount(p) {
-  return (p.amountMinor / 100).toFixed(2);
+function majorAmount(minor) {
+  return (minor / 100).toFixed(2);
 }
 
 function xmlHeader(ns) {
@@ -39,24 +45,36 @@ app.post('/payments', (req, res) => {
   const idem = req.header('Idempotency-Key');
   if (!idem) return res.status(400).json({ error: 'Missing Idempotency-Key header' });
 
+  // Idempotency replay
   if (idemKeys.has(idem)) {
     const existingId = idemKeys.get(idem);
     const existing = payments.get(existingId);
     return res.status(201).json(existing);
   }
 
-  const { externalId, debtorIban, creditorIban, currency, amountMinor, endToEndId, requestedExecutionDate } = req.body || {};
+  const {
+    externalId,
+    debtorIban,
+    creditorIban,
+    currency,
+    amountMinor,
+    endToEndId,
+    requestedExecutionDate
+  } = req.body || {};
+
   const errors = [];
   if (!externalId) errors.push('externalId required');
   if (!isIbanLike(debtorIban)) errors.push('debtorIban invalid');
   if (!isIbanLike(creditorIban)) errors.push('creditorIban invalid');
   if (!isCurrency(currency)) errors.push('currency invalid');
   if (!isPositiveInt(amountMinor)) errors.push('amountMinor invalid');
-  if (errors.length) return res.status(400).json({ error: 'validation', details: errors });
+
+  if (errors.length) {
+    return res.status(400).json({ error: 'validation', details: errors });
+  }
 
   const id = uuidv4();
   const now = dayjs().toISOString();
-  const scheduledNextBusinessDay = isAfterCutoff();
 
   const payment = {
     id,
@@ -68,7 +86,7 @@ app.post('/payments', (req, res) => {
     endToEndId: endToEndId || uuidv4(),
     requestedExecutionDate: requestedExecutionDate || dayjs().format('YYYY-MM-DD'),
     status: 'INITIATED',
-    scheduledNextBusinessDay,
+    scheduledNextBusinessDay: isAfterCutoff(),
     createdAt: now
   };
 
@@ -91,14 +109,15 @@ app.post('/payments', (req, res) => {
 app.get('/payments/:id', (req, res) => {
   const p = payments.get(req.params.id);
   if (!p) return res.status(404).json({ error: 'not_found' });
-  res.json(p);
+  return res.json(p);
 });
 
 // pain.001
 app.get('/payments/:id/pain001', (req, res) => {
   const p = payments.get(req.params.id);
   if (!p) return res.status(404).send('Not Found');
-  const amt = majorAmount(p);
+
+  const amt = majorAmount(p.amountMinor);
   const ns = 'urn:iso:std:iso:20022:tech:xsd:pain.001.001.03';
   const xml = `${xmlHeader(ns)}
   <CstmrCdtTrfInitn>
@@ -125,13 +144,15 @@ app.get('/payments/:id/pain001', (req, res) => {
     </PmtInf>
   </CstmrCdtTrfInitn>
 </Document>`;
+
   res.set('Content-Type', 'application/xml').status(200).send(xml);
-}
+});
 
 // pain.002
 app.get('/payments/:id/pain002', (req, res) => {
   const p = payments.get(req.params.id);
   if (!p) return res.status(404).send('Not Found');
+
   const ns = 'urn:iso:std:iso:20022:tech:xsd:pain.002.001.03';
   const status = p.status === 'REJECTED' ? 'RJCT' : 'ACSP';
   const xml = `${xmlHeader(ns)}
@@ -152,6 +173,7 @@ app.get('/payments/:id/pain002', (req, res) => {
     </OrgnlPmtInfAndSts>
   </CstmrPmtStsRpt>
 </Document>`;
+
   res.set('Content-Type', 'application/xml').status(200).send(xml);
 });
 
@@ -159,7 +181,8 @@ app.get('/payments/:id/pain002', (req, res) => {
 app.get('/payments/:id/pacs008', (req, res) => {
   const p = payments.get(req.params.id);
   if (!p) return res.status(404).send('Not Found');
-  const amt = majorAmount(p);
+
+  const amt = majorAmount(p.amountMinor);
   const ns = 'urn:iso:std:iso:20022:tech:xsd:pacs.008.001.02';
   const xml = `${xmlHeader(ns)}
   <FIToFICstmrCdtTrf>
@@ -177,6 +200,7 @@ app.get('/payments/:id/pacs008', (req, res) => {
     </CdtTrfTxInf>
   </FIToFICstmrCdtTrf>
 </Document>`;
+
   res.set('Content-Type', 'application/xml').status(200).send(xml);
 });
 
@@ -184,6 +208,7 @@ app.get('/payments/:id/pacs008', (req, res) => {
 app.get('/payments/:id/pacs002', (req, res) => {
   const p = payments.get(req.params.id);
   if (!p) return res.status(404).send('Not Found');
+
   const ns = 'urn:iso:std:iso:20022:tech:xsd:pacs.002.001.03';
   const status = p.status === 'REJECTED' ? 'RJCT' : 'ACSP';
   const xml = `${xmlHeader(ns)}
@@ -202,6 +227,7 @@ app.get('/payments/:id/pacs002', (req, res) => {
     </TxInfAndSts>
   </FIToFIPmtStsRpt>
 </Document>`;
+
   res.set('Content-Type', 'application/xml').status(200).send(xml);
 });
 
@@ -209,7 +235,8 @@ app.get('/payments/:id/pacs002', (req, res) => {
 app.get('/payments/:id/camt054', (req, res) => {
   const p = payments.get(req.params.id);
   if (!p) return res.status(404).send('Not Found');
-  const amt = majorAmount(p);
+
+  const amt = majorAmount(p.amountMinor);
   const ns = 'urn:iso:std:iso:20022:tech:xsd:camt.054.001.04';
   const xml = `${xmlHeader(ns)}
   <BkToCstmrDbtCdtNtfctn>
@@ -235,18 +262,20 @@ app.get('/payments/:id/camt054', (req, res) => {
     </Ntfctn>
   </BkToCstmrDbtCdtNtfctn>
 </Document>`;
+
   res.set('Content-Type', 'application/xml').status(200).send(xml);
 });
 
-// camt.053
+// camt.053 (statement)
 app.get('/statements/camt053', (_req, res) => {
   const ns = 'urn:iso:std:iso:20022:tech:xsd:camt.053.001.02';
   const all = Array.from(payments.values());
   const count = all.length;
   const sum = all.reduce((acc, p) => acc + p.amountMinor, 0) / 100;
+
   const xmlEntries = all.map((p) => {
     return `<Ntry>
-      <Amt Ccy="${p.currency}">${(p.amountMinor/100).toFixed(2)}</Amt>
+      <Amt Ccy="${p.currency}">${majorAmount(p.amountMinor)}</Amt>
       <CdtDbtInd>CRDT</CdtDbtInd>
       <NtryRef>${p.id}</NtryRef>
       <NtryDtls>
@@ -263,7 +292,7 @@ app.get('/statements/camt053', (_req, res) => {
       <MsgId>statement-${dayjs().format('YYYYMMDDHHmmss')}</MsgId>
       <CreDtTm>${dayjs().toISOString()}</CreDtTm>
       <NbOfMsgs>${count}</NbOfMsgs>
-      <CtrlSum>${(sum).toFixed(2)}</CtrlSum>
+      <CtrlSum>${sum.toFixed(2)}</CtrlSum>
     </GrpHdr>
     <Stmt>
       <Id>${uuidv4()}</Id>
@@ -271,6 +300,7 @@ app.get('/statements/camt053', (_req, res) => {
     </Stmt>
   </BkToCstmrStmt>
 </Document>`;
+
   res.set('Content-Type', 'application/xml').status(200).send(xml);
 });
 
