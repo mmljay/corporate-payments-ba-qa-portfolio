@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://www.python.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org/)
-[![CI](https://img.shields.io/github/actions/workflow/status/jayawardenamml/corporate-payments-ba-qa-portfolio/ci.yml?label=CI)](https://github.com/mmljay/corporate-payments-ba-qa-portfolio/actions)
+
 
 This project demonstrates my end-to-end Business Analysis (BA) and Quality Assurance (QA) skills, focusing on credit transfer functionality and reconciliation processes. It combines comprehensive BA documentation with hands-on QA deliverables, supported by a minimal payments API mock that can run locally or in CI pipelines.
 
